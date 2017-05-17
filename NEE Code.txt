@@ -1,0 +1,50 @@
+library(ape)
+library(nlme)
+library(phytools)
+library(1lou)
+
+
+#Import the trees from a bootstrap file or other text file with many trees
+trees<-read.tree("multiphyloobject.tre")
+
+#Read in data
+dat<-read.table("data.txt",header=TRUE)
+
+#Phylogenetic PCA
+pctest<-phyl.pca(tree,x,method="lambda",mode="corr")
+
+#Run PGLS across a set of trees
+PGLSs<-list()
+runPGLS<- for (i in 1:250) {
+    PGLSs[[paste(i)]]<-gls(y~x, dat, correlation=corPagel(0.5,phy=trees[[i]],fixed=FALSE))
+}
+
+
+#Run adaptive landscape analyses with l1ou across a set of trees
+adjdat<-list()
+atrees<-list()
+adats<-list()
+adjust<- for (i in 1:100) {
+adjdat[[paste(i)]]<-adjust_data(trees[[i]],dat)
+atrees[[paste(i)]]=adjdat[[i]]$tree
+adats[[paste(i)]]=adjdat[[i]]$Y
+}
+
+outests<-list()
+L1OU<- for (i in 1:100) {
+outests[[paste(i)]]<-estimate_shift_configuration(atrees[[i]], adats[[i]], max.nShifts = 25, criterion = "AICc", root.model = "OUrandomRoot", candid.edges = NA, quietly = FALSE,
+alpha.starting.value = NA, alpha.lower = NA, lars.alg = "stepwise", rescale = FALSE, edge.length.threshold = .Machine$double.eps, grp.delta = 1/16,
+grp.seq.ub = 5, l1ou.options = NA)
+}
+
+convtests<-list()
+ctest<- for (i in 1:100) {
+convtests[[paste(i)]]<-estimate_convergent_regimes(outests[[i]], criterion = "AICc", method = "backward")
+}
+
+#Comparison of rates along morphological axes between sexes/trees where phy=tree and x=matrix of species values  #
+#Base code available from http://www.public.iastate.edu/~dcadams/software.html -- CompareRatesAmongTraits.txt #
+CompareRates.multTrait<-function(phy,x,TraitCov=T,ms.err=NULL,ms.cov=NULL)
+
+
+
